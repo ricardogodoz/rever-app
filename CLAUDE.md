@@ -81,6 +81,22 @@ pnpm test:e2e    # playwright
 - Não usar múltiplos usuários/perfis — arquitetura já prepara (auditoria), mas RBAC é fora do
   MVP.
 
+## Gestão de contexto e execução
+
+- Antes de iniciar uma tarefa, leia `docs/progress.md`.
+- Execute somente o marco ou tarefa explicitamente solicitado e pare ao concluí-lo.
+- Leia apenas as seções dos documentos relevantes para a tarefa atual.
+- Não releia `docs/requisitos.pdf`, exceto quando os documentos resumidos não resolverem uma
+  ambiguidade.
+- Não examine o repositório inteiro quando buscas e leituras direcionadas forem suficientes.
+- Nunca leia `node_modules`, `.next`, cobertura, arquivos gerados ou lockfiles completos sem
+  necessidade.
+- Evite explicações extensas durante a execução.
+- Ao final, apresente apenas: alterações realizadas, testes executados, problemas pendentes e
+  próxima tarefa.
+- Atualize `docs/progress.md` após concluir cada marco.
+- Não comece automaticamente o próximo marco.
+
 ## Documentos de referência
 
 - `docs/requisitos.pdf` — fonte completa original.
