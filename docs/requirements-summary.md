@@ -40,9 +40,15 @@ Bancos e contas, Receitas, Despesas, Vendas, Relatórios, Configurações.
   (retorno de materiais, saída do produto final), só se houver saldo do produto final.
 - **Bancos e contas** (RF-BAN-001..003): saldo = saldo inicial + receitas recebidas −
   despesas pagas; pendentes não contam; inativação em vez de exclusão.
-- **Receitas** (RF-REC-001..005): simples ou vinculada a venda; situações pendente/recebida/
-  cancelada; só "recebida" altera saldo da conta; cancelamento preserva histórico.
-- **Despesas** (RF-DES-001..005): situações pendente/paga/cancelada; só "paga" reduz saldo;
+- **Receitas** (RF-REC-001..005): simples ou vinculada a venda; não existe ação separada de
+  "marcar como recebida" — o próprio cadastro/edição tem um campo **Data de recebimento**
+  (opcional); sem data, a receita é pendente; com data, é recebida, e é esse preenchimento
+  (não um status à parte) que passa a afetar o saldo da conta; conta bancária obrigatória
+  assim que a data de recebimento é informada; não aceita data de recebimento futura;
+  cancelamento é um estado separado do recebimento, preserva histórico, e some do saldo assim
+  que marcado; remover a data de recebimento de uma receita já recebida exige confirmação.
+- **Despesas** (RF-DES-001..005): mesma lógica das receitas, com campo **Data de pagamento**
+  no lugar de "Data de recebimento" (sem data = pendente; com data = paga, reduz o saldo);
   anexos (mesmo mecanismo de vendas).
 - **Vendas** (RF-VEN-001..010): cliente informado direto na venda (sem cadastro próprio no
   MVP); itens com produto final ativo, quantidade, valor unitário, desconto; total =
@@ -56,7 +62,9 @@ Bancos e contas, Receitas, Despesas, Vendas, Relatórios, Configurações.
 
 ## Regras invariantes (seção 6 — RN)
 
-- **RN-001**: só receita recebida / despesa paga alteram saldo bancário realizado.
+- **RN-001**: só receita/despesa **não cancelada** com data de recebimento/pagamento
+  preenchida altera saldo bancário realizado (a data preenchida É o que define "recebida"/
+  "paga" — não existe um status independente disso).
 - **RN-002**: proibido estoque negativo no MVP.
 - **RN-003**: movimentações/lançamentos concluídos nunca são apagados — só cancelamento ou
   estorno.
@@ -80,7 +88,8 @@ Bancos e contas, Receitas, Despesas, Vendas, Relatórios, Configurações.
 - Backup de banco e anexos (fora do MVP implementar automação, mas não deve ser impedido).
 - Mensagens de erro em linguagem simples e específica (ex.: "faltam N unidades de X").
 - Confirmação obrigatória em operações sensíveis (cancelar venda/produção, estornar,
-  inativar, alterar saldo inicial).
+  inativar, alterar saldo inicial, remover data de recebimento/pagamento de um lançamento já
+  realizado).
 - Datas DD/MM/AAAA, valores R$ 1.234,56, fuso America/Sao_Paulo.
 
 ## Critérios de aceite do MVP (seção 9)

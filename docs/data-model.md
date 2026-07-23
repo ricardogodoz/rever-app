@@ -62,8 +62,25 @@ active, auditoria`.
 
 ### FinancialEntry — Lançamento (receita ou despesa)
 `id, kind (INCOME | EXPENSE), origin (SIMPLE | SALE), description, categoryId, amount
-(Decimal), competenceDate, dueDate?, paymentDate?, bankAccountId, status (PENDING | DONE |
-CANCELLED — "DONE" = recebida/paga), sourceId? (venda), notes?, auditoria`.
+(Decimal), competenceDate, dueDate?, settledAt? (DateTime — data de recebimento se
+kind=INCOME, de pagamento se kind=EXPENSE), bankAccountId?, cancelledAt? (DateTime — estado
+operacional de cancelamento, independente de `settledAt`), sourceId? (venda), notes?,
+auditoria`.
+
+Não existe campo de status (`PENDING`/`DONE`/`CANCELLED`) — a situação financeira é sempre
+derivada de `settledAt`/`cancelledAt`, nunca guardada em duplicidade:
+- `settledAt == null` → pendente. `settledAt != null` → recebida (INCOME) ou paga (EXPENSE).
+- `cancelledAt != null` → cancelado (estado operacional à parte, não se confunde com
+  "pendente"; um lançamento cancelado pode ou não ter `settledAt` preenchido, mas nunca afeta
+  saldo).
+- Só entra no saldo bancário (RN-001) um lançamento com `cancelledAt == null` **e**
+  `settledAt != null`.
+- `bankAccountId` é opcional no schema, mas obrigatório no service sempre que `settledAt`
+  estiver preenchido (checado em service, não só em DB — mesmo padrão do saldo de estoque
+  não-negativo).
+- `settledAt` não aceita data futura (checado em service).
+- Editar um lançamento que tinha `settledAt` preenchido e apagar essa data (voltar a
+  "pendente") exige confirmação explícita do usuário na UI.
 
 ### Sale — Venda / SaleItem
 `Sale: id, number (unique), date, customerName, customerDocument?, customerEmail?,
@@ -78,8 +95,9 @@ sizeBytes, storagePath, uploadedById, uploadedAt`.
 
 ## Enums previstos
 `ProductType (MATERIAL, FINISHED)`, `UnitOfMeasure (UNIT, KG, G, M, CM, L, ML, PACKAGE,
-ROLL)`, `StockMovementType` (ver acima), `ProductionStatus`, `FinancialEntryStatus`,
-`SaleStatus`, `BankAccountType`.
+ROLL)`, `StockMovementType` (ver acima), `ProductionStatus`, `SaleStatus`,
+`BankAccountType`. `FinancialEntry` não tem enum de status — ver seção acima
+(`settledAt`/`cancelledAt`).
 
 ## Decisões
 
@@ -91,3 +109,9 @@ ROLL)`, `StockMovementType` (ver acima), `ProductionStatus`, `FinancialEntryStat
   `reversalOfId`/`sourceId` — nunca `DELETE`.
 - Anexos: caminho de armazenamento (`storagePath`) não deve ser servido por URL pública
   previsível (RNF-004) — detalhes em `docs/architecture.md`.
+- `FinancialEntry.settledAt` substitui o par `status (PENDING|DONE|CANCELLED)` +
+  `paymentDate?` usado inicialmente: uma data nula/preenchida já expressa pendente/recebida
+  (ou paga), sem duplicar a mesma informação em dois campos que poderiam divergir. O
+  cancelamento é um estado à parte (`cancelledAt`), porque um lançamento pode ser cancelado
+  estando pendente ou já recebido/pago — não é um terceiro valor da mesma variável que
+  `settledAt` representa.

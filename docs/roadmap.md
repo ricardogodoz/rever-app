@@ -30,8 +30,8 @@ critério de aceite e dependências. Atualize `docs/progress.md` ao concluir cad
   alerta de saldo. Dep.: M0.
 - **F1.3** Movimentações de estoque manuais (RF-EST-002..005, 007..009): entrada, saída,
   ajuste +/-, validação de saldo não-negativo, histórico filtrável. Dep.: F1.1, F1.2.
-- **F1.4** Transferência entre armazéns (RF-EST-006): transação atômica de 2 movimentações.
-  Dep.: F1.3.
+- **F1.4** *(adiado — não prioritário nesta fase)* Transferência entre armazéns
+  (RF-EST-006): transação atômica de 2 movimentações. Dep.: F1.3.
 - **F1.5** Estorno de movimentação (RF-EST-008). Dep.: F1.3.
 - **F1.6** Relatório de estoque atual (RF-REL-001) com totalizadores e filtro por mínimo.
   Dep.: F1.3.
