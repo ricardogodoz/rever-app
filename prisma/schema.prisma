@@ -35,6 +35,9 @@ model User {
 
   createdCompositions Composition[] @relation("CompositionCreatedBy")
   updatedCompositions Composition[] @relation("CompositionUpdatedBy")
+
+  createdProductions Production[] @relation("ProductionCreatedBy")
+  updatedProductions Production[] @relation("ProductionUpdatedBy")
 }
 
 enum ProductType {
@@ -82,6 +85,9 @@ model Product {
   compositionsAsFinished     Composition[]     @relation("CompositionFinishedProduct")
   compositionItemsAsMaterial CompositionItem[] @relation("CompositionItemMaterial")
 
+  productionsAsFinished     Production[]     @relation("ProductionFinishedProduct")
+  productionItemsAsMaterial ProductionItem[] @relation("ProductionItemMaterial")
+
   @@index([type])
   @@index([active])
 }
@@ -105,6 +111,9 @@ model Warehouse {
   stockBalances      StockBalance[]
   stockMovementsFrom StockMovement[] @relation("StockMovementFrom")
   stockMovementsTo   StockMovement[] @relation("StockMovementTo")
+
+  productionsAsSource      Production[] @relation("ProductionSourceWarehouse")
+  productionsAsDestination Production[] @relation("ProductionDestinationWarehouse")
 
   @@index([active])
 }
@@ -313,4 +322,59 @@ model CompositionItem {
   quantity          Decimal     @db.Decimal(14, 3)
 
   @@unique([compositionId, materialProductId])
+}
+
+enum ProductionStatus {
+  DRAFT
+  COMPLETED
+  CANCELLED
+}
+
+// F2.2 só cria o rascunho (DRAFT) com os materiais calculados a partir da composição ativa
+// do produto final. Validação de estoque e conclusão transacional (saída de materiais +
+// entrada do produto final) ficam para F2.3; cancelamento/estorno para F2.4.
+model Production {
+  id   String   @id @default(cuid())
+  code String   @unique
+  date DateTime @default(now())
+
+  finishedProductId String
+  finishedProduct   Product @relation("ProductionFinishedProduct", fields: [finishedProductId], references: [id], onDelete: Restrict)
+  quantity          Decimal @db.Decimal(14, 3)
+
+  sourceWarehouseId String
+  sourceWarehouse   Warehouse @relation("ProductionSourceWarehouse", fields: [sourceWarehouseId], references: [id], onDelete: Restrict)
+
+  destinationWarehouseId String
+  destinationWarehouse   Warehouse @relation("ProductionDestinationWarehouse", fields: [destinationWarehouseId], references: [id], onDelete: Restrict)
+
+  status ProductionStatus @default(DRAFT)
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById String
+  createdBy   User   @relation("ProductionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedById String
+  updatedBy   User   @relation("ProductionUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  items ProductionItem[]
+
+  @@index([finishedProductId])
+  @@index([status])
+}
+
+// Cópia dos itens da composição no momento da criação da produção — edições futuras da
+// composição não afetam produções já criadas (RF-CMP-004).
+model ProductionItem {
+  id                String     @id @default(cuid())
+  productionId      String
+  production        Production @relation(fields: [productionId], references: [id], onDelete: Cascade)
+  materialProductId String
+  materialProduct   Product    @relation("ProductionItemMaterial", fields: [materialProductId], references: [id], onDelete: Restrict)
+  quantityPerUnit   Decimal    @db.Decimal(14, 3)
+  quantityUsed      Decimal    @db.Decimal(14, 3)
+
+  @@unique([productionId, materialProductId])
 }

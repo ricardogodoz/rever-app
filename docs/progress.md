@@ -217,9 +217,43 @@
   de material repetido na mesma composição. `pnpm lint`, `pnpm typecheck`, `pnpm test`
   (71 casos), `pnpm test:e2e` (13 fluxos) e `pnpm build` passam sem erros.
 
+**F2.2 — Cadastro de produção + cálculo automático de materiais** (2026-07-23)
+
+- Models `Production` (`code` único gerado pelo sistema, `date`, `finishedProductId`,
+  `quantity`, `sourceWarehouseId`, `destinationWarehouseId`, `status`
+  `DRAFT | COMPLETED | CANCELLED`, `notes?`, auditoria) e `ProductionItem` (cópia dos itens
+  da composição ativa no momento da criação — `materialProductId`, `quantityPerUnit`,
+  `quantityUsed`, sem auditoria própria, mesmo padrão de `CompositionItem`) no Prisma;
+  migration `add_production` aplicada.
+- Módulo `src/modules/productions/`: `createProduction` valida produto final ativo do tipo
+  `FINISHED`, armazéns de origem/destino ativos, busca a composição ativa do produto final
+  (erro claro se não houver) e calcula `quantityUsed = quantityPerUnit × quantidade
+  informada` para cada material — tudo em `$transaction` (`Production` + `ProductionItem[]`),
+  status sempre `DRAFT`. Código gerado automaticamente (`PRD-000001`, sequencial por
+  `count()` dentro da transação) — RF-PRO-001 não pede o código como entrada do usuário.
+  **Escopo explícito do roadmap**: só cadastro + cálculo (RF-PRO-001..002); validação de
+  estoque suficiente e a conclusão transacional (saída de materiais + entrada do produto
+  final) ficam para F2.3, cancelamento/estorno para F2.4 — por isso não há ainda nenhuma
+  ação de "concluir" ou "cancelar" na tela de detalhe.
+- UI: `/producao` (listagem com busca, filtro de situação, badge por status),
+  `/producao/nova` (formulário com preview ao vivo dos materiais necessários via
+  `useWatch` — o `<Select>` de produto final só lista produtos com composição ativa, já que
+  sem composição não há o que calcular) e `/producao/[id]` (detalhe somente leitura com os
+  itens calculados).
+- Testes: `productions/schemas.test.ts` (8 casos) e `e2e/productions.spec.ts` (cadastro com
+  cálculo automático — 2 × 3 = 6 —, produto final sem composição ativa não aparece como
+  opção). Durante a escrita do e2e foi corrigido um bug latente nos testes de composição
+  (`compositions.spec.ts`) e produção: `toHaveURL(/\/composicao\/.+/)` e
+  `toHaveURL(/\/producao\/.+/)` combinavam trivialmente com a própria página `/nova` (a
+  regex não exige nada além de "algum caractere" depois da barra, e "nova" satisfaz isso),
+  então a asserção podia resolver antes do redirect real acontecer; trocado por
+  `/\/composicao\/(?!nova)[\w-]+$/` (idem para produção), que exige um segmento diferente de
+  "nova". `pnpm lint`, `pnpm typecheck`, `pnpm test` (79 casos), `pnpm test:e2e`
+  (14 fluxos) e `pnpm build` passam sem erros.
+
 ## Tarefa atual
 
-Nenhuma — F2.1 concluída e parado conforme escopo (não iniciar F2.2 automaticamente).
+Nenhuma — F2.2 concluída e parado conforme escopo (não iniciar F2.3 automaticamente).
 
 ## Decisões tomadas durante a execução (não previstas no plano original)
 
@@ -289,6 +323,6 @@ Nenhuma — F2.1 concluída e parado conforme escopo (não iniciar F2.2 automati
 
 ## Próxima tarefa recomendada
 
-F2.1 concluída. Próximo passo natural é **F2.2 — Cadastro de produção + cálculo automático
-de materiais** (RF-PRO-001..002), em `docs/roadmap.md`. Depende de F2.1 (concluído) e F1.2
-(concluído).
+F2.2 concluída. Próximo passo natural é **F2.3 — Validação de estoque e conclusão
+transacional** (RF-PRO-003..005): saída de materiais + entrada do produto final, tudo ou
+nada, em `docs/roadmap.md`. Depende de F2.2 (concluído) e F1.3 (concluído).

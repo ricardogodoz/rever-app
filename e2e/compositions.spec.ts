@@ -56,7 +56,7 @@ test("cadastra composição, calcula custo estimado e bloqueia segunda composiç
 
   await page.getByRole("button", { name: "Salvar" }).click();
 
-  await expect(page).toHaveURL(/\/composicao\/.+/);
+  await expect(page).toHaveURL(/\/composicao\/(?!nova)[\w-]+$/);
   const main = page.locator("main");
   await expect(main.getByText(new RegExp(finishedSku))).toBeVisible();
   await expect(main.getByText(/R\$\s*35,00/)).toBeVisible();
@@ -97,7 +97,7 @@ test("cadastra composição, calcula custo estimado e bloqueia segunda composiç
   await page.getByLabel("Quantidade").fill("1");
   await page.getByRole("button", { name: "Salvar" }).click();
 
-  await expect(page).toHaveURL(/\/composicao\/.+/);
+  await expect(page).toHaveURL(/\/composicao\/(?!nova)[\w-]+$/);
 });
 
 test("bloqueia o mesmo material duas vezes na mesma composição", async ({
