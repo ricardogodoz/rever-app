@@ -21,9 +21,25 @@
 - Documentação criada: `CLAUDE.md`, `docs/requirements-summary.md`,
   `docs/architecture.md`, `docs/data-model.md`, `docs/roadmap.md`.
 
+**F1.1 — CRUD de Produtos** (2026-07-23)
+
+- Model `Product` no Prisma (`ProductType`, `UnitOfMeasure`, SKU único, campos monetários
+  `Decimal`, auditoria `createdBy`/`updatedBy`); migration `add_product` aplicada.
+- Módulo `src/modules/products/` (schemas Zod, services com regra de SKU único, Server
+  Actions) seguindo o fluxo Formulário → Action → Service → Prisma da arquitetura.
+- UI: listagem em `/produtos` com busca (nome/SKU), filtro (tipo/situação), ordenação
+  (nome/SKU/tipo, asc/desc) via querystring GET; formulário único (`ProductForm`) reutilizado
+  em `/produtos/novo` e `/produtos/[id]`; inativação/reativação (sem exclusão, conforme
+  RN-008) com confirmação.
+- Componentes shadcn/ui adicionados: `table`, `select`, `badge` (estilo `base-nova`,
+  compatível com `@base-ui/react` já usado no projeto).
+- Testes: Vitest para `productSchema`/`productListQuerySchema` (14 testes no total) e
+  Playwright cobrindo cadastro → edição → inativação e bloqueio de SKU duplicado.
+  `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` e `pnpm build` passam sem erros.
+
 ## Tarefa atual
 
-Nenhuma — M0 concluído e parado conforme escopo definido.
+Nenhuma — F1.1 concluído e parado conforme escopo definido.
 
 ## Decisões tomadas durante a execução (não previstas no plano original)
 
@@ -41,8 +57,16 @@ Nenhuma — M0 concluído e parado conforme escopo definido.
 - Diretórios de "skills" de agente gerados automaticamente pelo `prisma init`
   (`.claude/skills`, `.windsurf/skills`, `.agents/skills`, `skills-lock.json`) foram removidos
   por não fazerem parte do escopo do projeto.
+- **Campos monetários/quantidade em formulário como string decimal**: o input do usuário é
+  validado por regex (2 casas para valores em R$, 3 para quantidades) e enviado como string
+  ao Prisma, que converte para `Decimal` sem passar por `number`/`float` do JS — evita
+  imprecisão de ponto flutuante já na validação do formulário.
+- **Sem exclusão de produto**: apenas inativar/reativar (RN-008); não há botão de exclusão
+  física, mesmo sem movimentação de estoque ainda existir (módulo de Estoque é F1.3).
+- **Filtros da listagem via `<form method="get">` nativo**: busca/filtro/ordenação não exigem
+  JavaScript no cliente, mantendo a página de listagem como Server Component puro.
 
 ## Próxima tarefa recomendada
 
-**F1.1 — CRUD de Produtos** (RF-PRD-001..007), primeira tarefa da Fase 1 em
-`docs/roadmap.md`. Depende apenas do M0, já concluído.
+**F1.2 — CRUD de Armazéns** (RF-ARM-001..003): cadastro, armazém padrão, inativação com
+alerta de saldo. Depende apenas do M0, já concluído.
