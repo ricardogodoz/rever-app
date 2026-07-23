@@ -175,11 +175,51 @@
   `settledAt` com confirmação, e o cancelamento. `pnpm lint`, `pnpm typecheck`, `pnpm test`
   (53 casos), `pnpm test:e2e` (11 fluxos) e `pnpm build` passam sem erros.
 
+**F2.1 — Composição de produtos** (2026-07-23)
+
+- Models `Composition` (`finishedProductId`, `active`, auditoria) e `CompositionItem`
+  (`compositionId`, `materialProductId`, `quantity`, único por composição+material) no Prisma;
+  migration `add_composition` aplicada.
+- Módulo `src/modules/compositions/`: `createComposition` valida produto final ativo do tipo
+  `FINISHED`, cada material ativo do tipo `MATERIAL`, e bloqueia criar uma composição ativa
+  para um produto final que já tem uma (RF-CMP-003); tudo em `$transaction`
+  (`Composition` + `CompositionItem[]`). `calculateEstimatedCost` soma
+  `quantidade × custo unitário do material` (RF-CMP-005), tratando material sem `unitCost`
+  como 0.
+- **Sem edição in-place da composição**: para trocar os materiais de um produto final, o
+  usuário inativa a composição atual e cadastra uma nova para o mesmo produto — decisão
+  consistente com o roadmap (F2.1 lista só "cadastro, validação, custo estimado", sem
+  "edição", diferente de F1.1/F1.2/F1.7) e com o precedente de
+  `financial-categories` (só criar + inativar/reativar, sem editar). Isso também resolve
+  "produção guarda cópia dos itens usados, não afetada por edições futuras" (RF-CMP-004,
+  relevante a partir de F2.2): cada "edição" já é uma nova `Composition`, então uma
+  `ProductionItem` snapshot futura nunca muda sob os pés.
+- Validação de schema (`compositionSchema`): pelo menos um material, sem material duplicado
+  na lista, produto final não pode ser material de si mesmo (checagem estrutural — a
+  regra completa "só material" depende do tipo do produto e é reforçada no service).
+- **Validação repetida no service** (`assertValidItems` em `services.ts`): mesma regra de
+  "produto final não pode ser material da própria composição" e "material não pode se
+  repetir" reforçada em `createComposition`, não só no schema Zod da Server Action — segue a
+  convenção do projeto ("não colocar regra de negócio importante só na interface"), como
+  defesa contra qualquer chamada que não passe pela validação da Action. Na prática, o
+  autorreferenciamento (mesmo produto como final e material) é estruturalmente inatingível
+  pela UI, já que os dois `<Select>` de `/composicao/nova` são populados por consultas
+  disjuntas (`type: FINISHED` vs `type: MATERIAL`) — coberto por teste unitário do schema;
+  o caso de material duplicado é alcançável pela UI normalmente e ganhou teste e2e dedicado.
+- UI: `/composicao` (listagem com busca por produto final + filtro de situação, contagem de
+  materiais, custo estimado, inativar/reativar), `/composicao/nova` (formulário com
+  `useFieldArray` do react-hook-form para adicionar/remover linhas de material, custo
+  estimado calculado ao vivo no cliente via `useWatch`), `/composicao/[id]` (detalhe
+  somente leitura com itens, custo por item e total, botão inativar/reativar).
+- Testes: `compositions/schemas.test.ts` (9 casos) e `e2e/compositions.spec.ts` — cadastro
+  com 2 materiais, custo estimado exibido no formulário/detalhe/listagem, bloqueio de segunda
+  composição ativa para o mesmo produto final, inativação liberando novo cadastro, e bloqueio
+  de material repetido na mesma composição. `pnpm lint`, `pnpm typecheck`, `pnpm test`
+  (71 casos), `pnpm test:e2e` (13 fluxos) e `pnpm build` passam sem erros.
+
 ## Tarefa atual
 
-Nenhuma — F1.2, F1.3, F1.5 a F1.10 concluídos e parado conforme escopo definido (Fase 1
-completa, exceto F1.4). F1.4 (transferência entre armazéns) foi adiado a pedido do usuário
-(não prioritário nesta fase) — ver `docs/roadmap.md`.
+Nenhuma — F2.1 concluída e parado conforme escopo (não iniciar F2.2 automaticamente).
 
 ## Decisões tomadas durante a execução (não previstas no plano original)
 
@@ -249,6 +289,6 @@ completa, exceto F1.4). F1.4 (transferência entre armazéns) foi adiado a pedid
 
 ## Próxima tarefa recomendada
 
-Fase 1 concluída (exceto F1.4, adiado). Próximo passo natural é **F2.1 — Composição de
-produtos** (RF-CMP-001..005), primeira tarefa da Fase 2 (Produção) em `docs/roadmap.md`.
-Depende de F1.1, já concluído.
+F2.1 concluída. Próximo passo natural é **F2.2 — Cadastro de produção + cálculo automático
+de materiais** (RF-PRO-001..002), em `docs/roadmap.md`. Depende de F2.1 (concluído) e F1.2
+(concluído).

@@ -32,6 +32,9 @@ model User {
 
   createdFinancialEntries FinancialEntry[] @relation("FinancialEntryCreatedBy")
   updatedFinancialEntries FinancialEntry[] @relation("FinancialEntryUpdatedBy")
+
+  createdCompositions Composition[] @relation("CompositionCreatedBy")
+  updatedCompositions Composition[] @relation("CompositionUpdatedBy")
 }
 
 enum ProductType {
@@ -75,6 +78,9 @@ model Product {
 
   stockBalances  StockBalance[]
   stockMovements StockMovement[]
+
+  compositionsAsFinished     Composition[]     @relation("CompositionFinishedProduct")
+  compositionItemsAsMaterial CompositionItem[] @relation("CompositionItemMaterial")
 
   @@index([type])
   @@index([active])
@@ -273,4 +279,38 @@ model FinancialEntry {
   @@index([cancelledAt])
   @@index([bankAccountId])
   @@index([categoryId])
+}
+
+// Uma composição ativa por produto final (RF-CMP-003): para trocar os materiais de um
+// produto, inative a composição atual e crie uma nova — não há edição in-place, então
+// produções passadas (F2.2) que guardam cópia dos itens usados nunca são afetadas.
+model Composition {
+  id                 String  @id @default(cuid())
+  finishedProductId  String
+  finishedProduct    Product @relation("CompositionFinishedProduct", fields: [finishedProductId], references: [id], onDelete: Restrict)
+  active             Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById String
+  createdBy   User   @relation("CompositionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedById String
+  updatedBy   User   @relation("CompositionUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  items CompositionItem[]
+
+  @@index([finishedProductId])
+  @@index([active])
+}
+
+model CompositionItem {
+  id                String      @id @default(cuid())
+  compositionId     String
+  composition       Composition @relation(fields: [compositionId], references: [id], onDelete: Cascade)
+  materialProductId String
+  materialProduct   Product     @relation("CompositionItemMaterial", fields: [materialProductId], references: [id], onDelete: Restrict)
+  quantity          Decimal     @db.Decimal(14, 3)
+
+  @@unique([compositionId, materialProductId])
 }
